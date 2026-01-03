@@ -1,13 +1,22 @@
 import { config } from 'dotenv'
 import { defineConfig } from 'drizzle-kit'
 
-config({ path: ['.env.local', '.env'] })
+config()
 
 export default defineConfig({
   out: './drizzle',
-  schema: './src/db/schema.ts',
+  // Where is our schema file?
+  schema: './src/core/db/schema.ts',
+  
+  // What database are we talking to?
   dialect: 'postgresql',
+  
+  // Where is the password?
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: process.env.DATABASE_URL!,
   },
+  
+  // If we want to check for data safety
+  verbose: true,
+  strict: true,
 })
