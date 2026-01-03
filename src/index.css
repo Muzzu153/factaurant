@@ -1,0 +1,24 @@
+/* 1. Import Tailwind */
+@import "tailwindcss";
+
+/* 2. Configure Your Custom Theme */
+@theme {
+  /* 
+     This tells Tailwind: 
+     "When I type 'bg-primary', use the value inside var(--primary)"
+  */
+  --color-primary: var(--primary);
+  --color-background: var(--background);
+  
+  /* You can also map fonts and radius */
+  --font-heading: var(--font-heading);
+  --radius-theme: var(--radius); 
+}
+
+/* 3. Base Styles (Optional Reset) */
+@layer base {
+  body {
+    /* Set defaults using your new classes */
+    @apply bg-background text-slate-900 font-sans antialiased;
+  }
+}
