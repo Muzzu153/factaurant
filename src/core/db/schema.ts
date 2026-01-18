@@ -1,3 +1,4 @@
+import { CartItem } from '@/modules/orders/order.schema';
 import { pgTable, text, uuid, jsonb, timestamp, integer, boolean } from 'drizzle-orm/pg-core'
 
 // 1. Define TYPES FOR TYPESCRIPT INTELLISENSE
@@ -91,7 +92,7 @@ export const products = pgTable('products', {
   // The Golden Rule
   // Every product MUST belong to a tenant
   // We use references() to enforce this relationship at the databse level.
-  tenantId: uuid('tenantId').references(() => tenants.id).notNull(),
+  tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
 
   name: text('name').notNull(),
   description: text('description'),
@@ -100,34 +101,34 @@ export const products = pgTable('products', {
   // 10.99 => 10.99
   price: integer('price').notNull(),
 
-  imageUrl: text('image-url'),
+  imageUrl: text('image_url'),
   isAvailable: boolean('is_available').default(true).notNull(),
 })
 
 
 // 1. DEFINE THE SHAPE OF THE JSON
 // This creates a contract for what goes inside the 'items' blob.
-export type OrderItemSnapshot = {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-};
+// export type OrderItemSnapshot = {
+//   productId: string;
+//   name: string;
+//   price: number;
+//   quantity: number;
+// };
 
 
 export const orders = pgTable('orders', {
   id: uuid('id').defaultRandom().notNull(),
-  tenantId: uuid('tenantId').references(() => tenants.id).notNull(),
+  tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
 
   // Who bought it? Guest checkout for MVP
-  custormerName: text('customer_name').notNull(),
+  customerName: text('customer_name').notNull(),
   customerAddress: text('customer_address').notNull(),
 
 
   // What did they buy?
   // Storing the cart items as a JSON blob for simplicity
   // In a huge app, "order_items" will be required, but jSON is fine for now.
-  items: jsonb('items').$type<OrderItemSnapshot[]>().notNull(),
+  items: jsonb('items').$type<CartItem[]>().notNull(),
 
   totalAmount: integer('total_amount').notNull(),
   status: text('status').default('pending').notNull(), // pending, cooking, devlivered
