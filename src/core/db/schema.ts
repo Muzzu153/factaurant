@@ -75,14 +75,6 @@ export const tenants = pgTable('tenants', {
  // Blueprint: How blocks are arranged on pages
 //  Pages reference blocks 
   pages: jsonb('pages').$type<Record<string, PageLayout>>().notNull(),
-
-  // the layout sytem 
-  // layout: jsonb('layout').$type<{
-  //   navbar: 'simple' | 'centered' | 'hamburger';
-  //   hero: 'simple-text' | 'split-image' | 'video-bg';
-  //   productCard: 'minimal' | 'shadow' | 'bordered';
-  // }>().notNull()
-
 })
 
 // ---- 2. THE PRODUCT TABLE (The "Menu Itme") ----
@@ -105,17 +97,6 @@ export const products = pgTable('products', {
   isAvailable: boolean('is_available').default(true).notNull(),
 })
 
-
-// 1. DEFINE THE SHAPE OF THE JSON
-// This creates a contract for what goes inside the 'items' blob.
-// export type OrderItemSnapshot = {
-//   productId: string;
-//   name: string;
-//   price: number;
-//   quantity: number;
-// };
-
-
 export const orders = pgTable('orders', {
   id: uuid('id').defaultRandom().notNull(),
   tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
@@ -130,7 +111,12 @@ export const orders = pgTable('orders', {
   // In a huge app, "order_items" will be required, but jSON is fine for now.
   items: jsonb('items').$type<CartItem[]>().notNull(),
 
+  subtotalAmount: integer('subtotal_amount').notNull(),
+  discountAmount: integer('discount_amount').notNull().default(0),
+  taxAmount: integer('tax_amount').notNull().default(0),
+
   totalAmount: integer('total_amount').notNull(),
+  
   status: text('status').default('pending').notNull(), // pending, cooking, devlivered
   createdAt: timestamp('created_at').defaultNow(),
 })
