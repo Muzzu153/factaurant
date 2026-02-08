@@ -7,7 +7,7 @@ import { products, orders, tenants } from './schema';
 export type TenantScope = ReturnType<typeof createTenantScope>;
 
 /**
- * ⚠️ IMPORTANT
+ * IMPORTANT
  * This scope MUST ONLY be used AFTER tenant resolution.
  * Never import or use this in tenant resolution logic.
  */
@@ -17,7 +17,7 @@ export function createTenantScope(tenantId: string) {
   }
 
   return {
-    // 🍕 PRODUCT REPOSITORY
+    // PRODUCT REPOSITORY
     products: {
       // 1. SAFE READ
       // Developer doesn't need to pass tenantId. It's baked in.
@@ -33,7 +33,7 @@ export function createTenantScope(tenantId: string) {
       // 2. SAFE WRITE
       // Developer passes data, we inject the tenantId automatically.
       create: async (data: Omit<typeof products.$inferInsert, "tenantId">) => {
-        const [created] = await db
+        const created = await db
           .insert(products)
           .values({
             ...data,
@@ -62,7 +62,7 @@ export function createTenantScope(tenantId: string) {
       },
 
       delete: async (id: string) => {
-        const [deleted] = await db
+        const deleted = await db
           .delete(products)
           .where(
             and(
@@ -77,7 +77,7 @@ export function createTenantScope(tenantId: string) {
 
     },
 
-    // 🛒 ORDER REPOSITORY
+    // ORDER REPOSITORY
     orders: {
       findMany: async () => {
         const allOrder = await db
@@ -90,11 +90,11 @@ export function createTenantScope(tenantId: string) {
       },
 
       create: async (data: Omit<typeof orders.$inferInsert, 'tenantId'>) => {
-        const [created] = await db
+        const created = await db
           .insert(orders)
           .values({
             ...data,
-            tenantId: tenantId, // 🔒 FORCED OVERRIDE
+            tenantId: tenantId, //  FORCED OVERRIDE
           }).returning();
 
         return created
