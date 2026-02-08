@@ -1,4 +1,3 @@
-// app/core/db/tenant-scope.ts
 import { eq, desc, and } from 'drizzle-orm';
 import { db } from './client';
 import { products, orders, tenants } from './schema';
