@@ -58,6 +58,7 @@ export function CartDrawer() {
     <div className="fixed inset-0 z-50 flex justify-end font-sans">
       {/* 1. BACKDROP */}
       <div
+        data-testid="cart-backdrop"
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={cartService.toggle}
       />
