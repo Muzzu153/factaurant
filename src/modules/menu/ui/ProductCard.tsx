@@ -1,6 +1,5 @@
-import { cartService } from '@/modules/cart/cart.store'
-import type { products } from '@/core/db/schema'
-
+import { cartService } from '../../cart/cart.store'
+import { Product } from '../../../core/db/zod-schema/product.schema'
 
 const formatPrice = (cents: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -8,9 +7,6 @@ const formatPrice = (cents: number) => {
     currency: 'USD',
   }).format(cents / 100)
 }
-
-// We use the type inferred from Drizzle so we don't have to write interfaces manually
-type Product = typeof products.$inferSelect
 
 export function ProductCard({ product }: { product: Product }) {
   return (
