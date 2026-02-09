@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { tenantMiddleware } from "@/modules/tenant/tenant.middleware";
+import { tenantMiddleware } from "../../modules/tenant/tenant.middleware";
 
 /**
  * PUBLIC FUNCTIONS
