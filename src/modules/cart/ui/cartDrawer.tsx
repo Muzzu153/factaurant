@@ -112,7 +112,13 @@ export function CartDrawer() {
                       Qty: {item.quantity}
                     </p>
                     <button
-                      onClick={() => cartService.remove(item.productId)}
+                      onClick={() => {
+                        if (!item.productId) {
+                          console.log('Missing product id')
+                          return
+                        }
+                        cartService.remove(item.productId)
+                      }}
                       className="text-red-500 text-xs font-medium hover:text-red-700"
                     >
                       Remove
