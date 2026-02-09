@@ -23,7 +23,7 @@ export const tenantMiddleware = createMiddleware().server(async ({ next }) => {
     // A. Check for "Single Tenant" Mode (The Ejection Plan)
     if (env.APP_DEPLOYMENT_MODE === 'single') {
         // --- SINGLE TENANT MODE (Ejection/Enterprise) ---
-        const forcedId = process.env.SINGLE_TENANT_ID;
+        const forcedId = env.SINGLE_TENANT_ID;
         if (!forcedId) throw new Error("APP_DEPLOYMENT_MODE is SINGLE, but ID is missing.");
 
         const tenant = await db.query.tenants.findFirst({
@@ -86,7 +86,7 @@ export const tenantMiddleware = createMiddleware().server(async ({ next }) => {
             tenant: {
                 id: tenantId,
                 name: tenantName,
-                mode: process.env.APP_DEPLOYMENT_MODE ?? 'shared',
+                mode: env.APP_DEPLOYMENT_MODE ?? 'shared',
             },
             // 🎁 We add the Safe DB to the context
             db: scopedDb,
