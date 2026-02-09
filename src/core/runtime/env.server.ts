@@ -1,5 +1,4 @@
-// core/runtime/env.ts
-import { z } from 'zod';
+import { z } from 'zod'
 
 const ServerEnvSchema = z.object({
   APP_DEPLOYMENT_MODE: z.enum(['shared', 'single']).default('shared'),
@@ -7,7 +6,9 @@ const ServerEnvSchema = z.object({
 
   DATABASE_URL: z.url(),
 
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-});
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
+})
 
-export const env = ServerEnvSchema.parse(process.env);
+export const env = ServerEnvSchema.parse(process.env)
