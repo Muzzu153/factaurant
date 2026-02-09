@@ -1,13 +1,14 @@
-import { useCart, cartService } from '../cart.store';
+import { useCart, cartService } from '../cart.store'
 
 export function CartFloatingButton() {
-  const { count } = useCart();
+  const { count } = useCart()
 
   // UX Rule: Don't show the button if there is nothing to buy
-  if (count === 0) return null;
+  if (count === 0) return null
 
   return (
     <button
+      data-testid="cart-open-button"
       onClick={cartService.toggle}
       className="fixed bottom-6 right-6 flex items-center gap-2 px-6 py-3 text-white shadow-lg bg- rounded-theme hover:scale-105 transition z-40 animate-in fade-in zoom-in duration-300"
     >
@@ -16,5 +17,5 @@ export function CartFloatingButton() {
         {count}
       </span>
     </button>
-  );
+  )
 }
