@@ -7,7 +7,7 @@ interface NavbarProps {
   title?: string;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ title = "MyBrand" }) => {
+const Navbar: React.FC<NavbarProps> = () => {
 
     // const useQuery() = getTenant()
     const {data: tenant} = useQuery({
