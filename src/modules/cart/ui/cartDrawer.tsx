@@ -163,6 +163,7 @@ export function CartDrawer() {
           {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <button
+            aria-label="place-order"
             onClick={handleCheckout}
             className="w-full py-3 text-white font-bold text-lg bg-blue-600 rounded-theme hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
             disabled={
