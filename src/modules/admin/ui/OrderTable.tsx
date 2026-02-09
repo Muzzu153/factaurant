@@ -42,7 +42,7 @@ export function OrderTable({ orders }: { orders: Order[] }) {
                   {order.id.slice(0, 8)}...
                 </td>
                 <td className="p-4">
-                  <div className="font-semibold text-slate-900">{order.custormerName}</div>
+                  <div className="font-semibold text-slate-900">{order.customerName}</div>
                   <div className="text-xs text-slate-400">{order.customerAddress}</div>
                 </td>
                 <td className="p-4">
