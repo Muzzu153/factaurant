@@ -1,9 +1,9 @@
 import { getRequestHeaders } from "@tanstack/react-start/server"
-import { db } from "@/core/db/client";
+import { db } from "../../core/db/client";
 import { eq } from "drizzle-orm";
 import { notFound } from "@tanstack/react-router";
-import { tenants } from "@/core/db/schema.ts";
-import { publicFn } from "@/core/runtime/serverFns";
+import { tenants } from "../../core/db/schema.ts";
+import { publicFn } from "../../core/runtime/serverFns";
 
 //  This function runs only on the server.
 export const getTenant = publicFn.handler(

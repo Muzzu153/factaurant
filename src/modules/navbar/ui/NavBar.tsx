@@ -1,4 +1,4 @@
-import { getTenant } from '@/modules/tenant';
+import { getTenant } from '../../tenant/tenant.server';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 

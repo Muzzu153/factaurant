@@ -8,10 +8,10 @@ import { createMiddleware } from '@tanstack/react-start';
 import { getRequestHeaders } from '@tanstack/react-start/server';
 import { notFound } from '@tanstack/react-router';
 import { eq } from 'drizzle-orm';
-import { db } from '@/core/db/client';
-import { env } from '@/core/runtime/env';
+import { db } from '../../core/db/client';
+import { env } from '../../core/runtime/env.server';
 import { tenants } from '../../core/db/schema';
-import { createTenantScope } from '@/core/db/tenant-scope';
+import { createTenantScope } from '../../core/db/tenant-scope';
 
 
 // 1. DEFINE THE MIDDLEWARE
