@@ -44,6 +44,7 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
 
           <button
+            data-testid={`add-to-cart-${product.id}`}
             onClick={() => cartService.add(product)}
             className="px-4 py-2 bg-blue-600 text-sm font-medium text-black transition hover:opacity-90 rounded-theme cursor-pointer"
           >
