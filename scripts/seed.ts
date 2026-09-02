@@ -6,8 +6,8 @@ async function main() {
     console.log('Starting seed....');
 
     await db.delete(products);
-    await db.delete(tenants);
     await db.delete(orders);
+    await db.delete(tenants);
 
     // 4. CREATE TENANT B: "Sushi Master (The Luxury Brand)"
     const [sushiTenant] = await db.insert(tenants).values({
@@ -132,6 +132,61 @@ async function main() {
         }
 
     }).returning();
+    const [burgerTenant] = await db.insert(tenants).values({
+        slug: 'queens-burger', // We will acess this via pizza-king.localhost:3000
+        name: 'Queen\'s Burger',
+        theme: {
+            colors: {
+                primary: '#75ff69',
+                secondary: 'rgb(185, 42, 51)',
+                tertiary: 'rgb(0, 255, 221)',
+                accent: 'rgb(122, 131, 0)',
+                background: '#fff1f2',
+                text: '#ffffffff',
+            },
+
+            borderRadius: {
+                xsm: '0.5em',
+                sm: '1em',
+                md: '3em',
+                lg: '5em',
+                xl: '8em',
+                xlg: '10em',
+            },
+
+            fonts: {
+                heading: 'sans',
+                body: 'serif',
+            }
+
+        },
+        blocks: {
+            "hero_main": {
+                type: "hero_text", // Different component type
+                props: {
+                    heading: "Hot & Fresh",
+                    ctaText: "Order Now",
+                }
+            },
+            "menu_main": {
+                type: "menu_list", // Different component type
+                props: {}
+            },
+            "nav_main": { type: "navbar_simple", props: {} },
+            "footer_main": { type: "footer_simple", props: { text: "© 2025 Sushi Master" } }
+        },
+        pages: {
+            "home": {
+                layout: {
+                    header: ["nav_main", "hero_main"],
+                    main: ["menu_main"],
+                    footer: ["footer_main"]
+                },
+                meta: { title: "Queen's Burger- Home" }
+            }
+        }
+
+    }).returning();
 
 
 
@@ -165,6 +220,23 @@ async function main() {
             name: 'Salmon Nigiri',
             description: 'Fresh Atlantic salon on rice',
             price: 800,
+            imageUrl: '',
+        },
+    ]);
+
+    await db.insert(products).values([
+        {
+            tenantId: burgerTenant.id,
+            name: 'Double patty',
+            description: 'Potato, spinach, tomato sauce',
+            price: 1200,
+            imageUrl: '',
+        },
+        {
+            tenantId: burgerTenant.id,
+            name: 'Jumbo Special',
+            description: 'Double cheese slice, double chicken patty, double sauces',
+            price: 2800,
             imageUrl: '',
         },
     ]);

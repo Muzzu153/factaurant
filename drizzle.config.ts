@@ -14,7 +14,7 @@ export default defineConfig({
   
   // Where is the password?
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: env.DATABASE_URL!,
   },
   
   // If we want to check for data safety

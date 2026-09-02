@@ -1,4 +1,4 @@
-// ⚠️ CONTROL PLANE ONLY
+// CONTROL PLANE ONLY
 // This file:
 // - resolves tenant identity
 // - creates tenant-scoped DB
@@ -59,7 +59,7 @@ export const tenantMiddleware = createMiddleware().server(async ({ next }) => {
         // If no tenant is found, we STOP execution right here.
         // The 'next()' function is NEVER called. The request dies.
         if (!tenant) {
-            console.error(`⛔ Request rejected: Unknown slug '${slug}'`);
+            console.error(`Request rejected: Unknown slug '${slug}'`);
             throw notFound();
         }
 
@@ -69,13 +69,13 @@ export const tenantMiddleware = createMiddleware().server(async ({ next }) => {
 
     }
 
-    // 🔒 Invariant enforcement
+    // Invariant enforcement
     if (!tenantId) {
         throw new Error("Invariant violation: tenantId not resolved");
     }
 
 
-    // 🔥 HERE IS THE UPGRADE
+    // HERE IS THE UPGRADE
     // We initialize the Safe DB Wrapper right here.
     const scopedDb = Object.freeze(createTenantScope(tenantId));
 
@@ -88,7 +88,7 @@ export const tenantMiddleware = createMiddleware().server(async ({ next }) => {
                 name: tenantName,
                 mode: env.APP_DEPLOYMENT_MODE ?? 'shared',
             },
-            // 🎁 We add the Safe DB to the context
+            // We add the Safe DB to the context
             db: scopedDb,
         }
     });
