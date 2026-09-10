@@ -14,6 +14,7 @@ import indexCss from '../index.css?url'
 // The 'loader' runs on the server before the page renders.
 // It calls our 'getTenant' function to fetch the data.
 export const Route = createRootRoute({
+  notFoundComponent: () => <div>Page not found</div>,
   head: () => ({
     meta: [
       { charSet: 'utf-8' },

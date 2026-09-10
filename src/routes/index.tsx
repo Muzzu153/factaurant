@@ -1,7 +1,7 @@
 import { createFileRoute, useLoaderData } from '@tanstack/react-router'
 import { BlockRenderer } from '@/core/ui/BlockRenderer'
-import { CartFloatingButton } from '@/modules/cart/ui/cartFloatingButton'
-import { CartDrawer } from '@/modules/cart/ui/cartDrawer'
+import { CartFloatingButton } from '@/modules/cart/ui/CartFloatingButton'
+import { CartDrawer } from '@/modules/cart/ui/CartDrawer'
 
 export const Route = createFileRoute('/')({
   component: Home,

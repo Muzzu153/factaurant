@@ -1,4 +1,4 @@
-import { COMPONENT_REGISTRY } from '../..//modules/hero/registry'
+import { COMPONENT_REGISTRY } from '../../registry'
 import { FeatureBoundary } from './FeatureBoundary'
 // import { env } from '../runtime/env.server'
 import { clientEnv } from '../runtime/env.client'

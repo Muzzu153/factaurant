@@ -79,7 +79,7 @@ export const tenants = pgTable('tenants', {
 
 // ---- 2. THE PRODUCT TABLE (The "Menu Itme") ----
 export const products = pgTable('products', {
-  id: uuid('id').defaultRandom().primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom().notNull(),
 
   // The Golden Rule
   // Every product MUST belong to a tenant
@@ -98,7 +98,7 @@ export const products = pgTable('products', {
 })
 
 export const orders = pgTable('orders', {
-  id: uuid('id').defaultRandom().notNull(),
+  id: uuid('id').primaryKey().defaultRandom().notNull(),
   tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
 
   // Who bought it? Guest checkout for MVP
