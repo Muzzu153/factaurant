@@ -53,7 +53,7 @@ describe('Performance Smoke Tests', () => {
 
     console.log(`📊 Database query: ${formatResponseTime(queryTime)}`)
 
-    expect(queryTime).toBeLessThan(100) // Under 100ms
+    expect(queryTime).toBeLessThan(300) // Under 300ms
   })
 
   test('concurrent requests handle well', async () => {

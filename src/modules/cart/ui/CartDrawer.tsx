@@ -1,6 +1,7 @@
 import { useCart, cartService } from '../cart.store'
 import { useState } from 'react'
 import { placeOrder } from '../cart.server'
+import { img } from '../../../core/utils/image'
 
 // Helper for money formatting
 const formatPrice = (cents: number) =>
@@ -92,7 +93,7 @@ export function CartDrawer() {
                 {/* Tiny Image Thumbnail */}
                 {item.imageUrl && (
                   <img
-                    src={item.imageUrl}
+                    src={img.cartThumb(item.imageUrl)}
                     alt={item.name}
                     className="h-16 w-16 rounded-md object-cover bg-slate-100"
                   />

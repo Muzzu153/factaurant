@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { CartDrawer } from '../../src/modules/cart/ui/cartDrawer'
+import { CartDrawer } from '../../src/modules/cart/ui/CartDrawer'
 import { cartStore } from '../../src/modules/cart/cart.store'
 
 // Mock placeOrder server function (NO network in unit tests)

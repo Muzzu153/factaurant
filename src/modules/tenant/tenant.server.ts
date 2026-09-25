@@ -6,8 +6,8 @@ import { tenants } from "../../core/db/schema.ts";
 import { publicFn } from "../../core/runtime/serverFns";
 
 //  This function runs only on the server.
-export const getTenant = publicFn.handler(
-    async () => {
+export const getTenant = publicFn.handler(async () => {
+    try {
 
         // GET the host headers
         // This is how we know which domain th user typed
@@ -32,11 +32,18 @@ export const getTenant = publicFn.handler(
         const tenant = await db.query.tenants.findFirst({
             where: eq(tenants.slug, slug),
         })
+
+        console.log(`📦 Database query result for ${slug}:`, tenant ? 'FOUND' : 'NOT_FOUND');
         // HANDLE 'shop not found'
         // If someone types 'fake-shop.localhost', we thorw a 404
         if (!tenant) {
+            console.error(`❌ Tenant '${slug}' not found in Supabase database!`);
             throw notFound();
         }
 
         return tenant;
-    })
+    } catch (err: any) {
+        console.error('💥 CRITICAL ERROR in getTenant:', err);
+        throw err;
+    }
+})

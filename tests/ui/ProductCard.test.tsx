@@ -28,12 +28,15 @@ describe('ProductCard UI', () => {
     expect(screen.getByText(/\$120\.00/)).toBeInTheDocument()
   })
 
-  test('renders product image when imageUrl exists', () => {
-    render(<ProductCard product={mockProduct} />)
+  test('renders product image through R2 transform', () => {
+  render(<ProductCard product={mockProduct} />)
 
-    const img = screen.getByRole('img', { name: /margherita pizza/i })
-    expect(img).toHaveAttribute('src', mockProduct.imageUrl)
-  })
+  const img = screen.getByRole('img', { name: /margherita pizza/i })
+  const src = img.getAttribute('src')
+  
+  expect(src).toContain('images.factaurant.com')
+  expect(src).toContain('pizza.jpg')
+})
 
   test('clicking Add to cart calls cartService.add()', async () => {
     const addSpy = vi.spyOn(cartModule.cartService, 'add')

@@ -14,7 +14,6 @@ import indexCss from '../index.css?url'
 // The 'loader' runs on the server before the page renders.
 // It calls our 'getTenant' function to fetch the data.
 export const Route = createRootRoute({
-  notFoundComponent: () => <div>Page not found</div>,
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -38,7 +37,21 @@ export const Route = createRootRoute({
   //   return { tenant }
   // },
 
+   errorComponent: ({ error }) => (
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif', color: '#b91c1c', background: '#fef2f2' }}>
+      <h2>🚨 Application Root Error</h2>
+      <pre style={{ whiteSpace: 'pre-wrap' }}>{error.message || String(error)}</pre>
+      <pre style={{ fontSize: '0.8rem', color: '#6b7280' }}>{error.stack}</pre>
+    </div>
+  ),
+  notFoundComponent: () => (
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif', textAlign: 'center' }}>
+      <h2>🏪 Restaurant Not Found (404)</h2>
+      <p>This brand does not exist in the database.</p>
+    </div>
+  ),
   component: RootComponent,
+
 })
 
 function RootComponent() {

@@ -4,12 +4,13 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
-import netlify from '@netlify/vite-plugin-tanstack-start'
+import { nitro } from 'nitro/vite'
+// import netlify from '@netlify/vite-plugin-tanstack-start'
 
 const config = defineConfig({
   plugins: [
     devtools(),
-    netlify(),
+    // netlify(),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
@@ -17,7 +18,16 @@ const config = defineConfig({
     tailwindcss(),
     tanstackStart(),
     viteReact(),
+    nitro()
   ],
+
+  ssr: {
+    external: [
+      '@aws-sdk/client-s3',
+      '@aws-sdk/s3-request-presigner',
+      'pg',
+    ],
+  },
 
   server: { port: 3000, hmr: { port: 3000 } }
 })

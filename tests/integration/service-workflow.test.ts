@@ -68,7 +68,7 @@ describe('Integration: Service Workflow', () => {
         const pizzaId = await getTenantIdBySlug('pizza-king')
         const pizzaDb = createTenantScope(pizzaId)
 
-        const orders = await adminService(pizzaDb)
+        const orders = await adminService.getRecentOrders(pizzaDb)
 
         expect(orders.every(o => o.tenantId === pizzaId)).toBe(true)
     })
@@ -87,7 +87,7 @@ describe('Integration: Service Workflow', () => {
             items: [{ name: 'Sushi', price: 30000, quantity: 1 }],
         })
 
-        const pizzaOrders = await adminService(pizzaDb)
+        const pizzaOrders = await adminService.getRecentOrders(pizzaDb)
         expect(pizzaOrders.some(o => o.tenantId === sushiId)).toBe(false)
     })
 

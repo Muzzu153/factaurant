@@ -76,7 +76,7 @@ describe('Integration: Tenant READ Isolation', () => {
     test('adminService returns only tenant orders', async () => {
         const pizzaDb = createTenantScope(TENANTS.pizza.id)
 
-        const pizzaOrders = await adminService(pizzaDb)
+        const pizzaOrders = await adminService.getRecentOrders(pizzaDb)
 
         expect(pizzaOrders.length).toBeGreaterThanOrEqual(0)
         expect(pizzaOrders.every(o => o.tenantId === TENANTS.pizza.id)).toBe(true)

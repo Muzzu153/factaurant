@@ -25,13 +25,15 @@ describe('Security Smoke Tests', () => {
         },
       }
     )
+    // console.log(`Response: ${response.json()}`)
 
     const data = await response.json()
+    console.log(`Data: ${data}`)
 
     // Should only return Tenant A's products
     for (const product of data) {
-      expect(product.tenantId).toBe(tenantA.id)
-      expect(product.tenantId).not.toBe(tenantB.id)
+      expect(product.id).toBe(tenantA.id)
+      expect(product.id).not.toBe(tenantB.id)
     }
   })
 

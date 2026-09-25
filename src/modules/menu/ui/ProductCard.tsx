@@ -1,5 +1,6 @@
 import { cartService } from '../../cart/cart.store'
 import { Product } from '../../../core/db/zod-schema/product.schema'
+import { img } from '../../../core/utils/image'
 
 const formatPrice = (cents: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -15,7 +16,7 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
         {product.imageUrl ? (
           <img
-            src={product.imageUrl}
+            src={img.card(product.imageUrl)}
             alt={product.name}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
           />

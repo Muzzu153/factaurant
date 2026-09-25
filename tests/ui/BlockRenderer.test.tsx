@@ -20,7 +20,7 @@ const mockTenant = {
 }
 
 // 2️ Mock registry
-vi.mock('../../src/modules/hero/registry', () => ({
+vi.mock('../../src/registry', () => ({
   COMPONENT_REGISTRY: {
     hero_text: () => <div>Hello World</div>,
     menu_grid: () => <div>Menu Grid</div>,

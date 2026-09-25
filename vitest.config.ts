@@ -37,7 +37,7 @@ export default defineConfig({
           globals: true,
           include: ['tests/smoke/**/*.test.ts'],
           exclude: ['tests/ui/**/*.test.tsx'],
-          setupFiles: ['./smoke-test.setup.ts'],
+          setupFiles: ['./tests/setup/smoke-test.setup.ts'],
           sequence: {
             concurrent: false,
           }
