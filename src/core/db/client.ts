@@ -1,31 +1,40 @@
-import { drizzle } from 'drizzle-orm/node-postgres'
-import pg from 'pg'
-import * as schema from './schema'
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
+import * as schema from './schema';
 import { env } from '../runtime/env.server';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const connectionString = env.DATABASE_URL;
 
-if(!connectionString){
-    throw new Error('X Database URL is missing in .env')
+if (!connectionString) {
+  throw new Error('❌ DATABASE_URL is missing in .env');
 }
-// 1. Check if connecting to a local container/host
+
 const isLocalDb =
   connectionString.includes('localhost') ||
   connectionString.includes('127.0.0.1') ||
   connectionString.includes('@db:');
 
-  // 2. STRIP `?sslmode=...` so pg doesn't overwrite our custom ssl config
+// Strip any query parameters so pg doesn't override our SSL object
 const cleanConnectionString = connectionString.replace(/[\?&]sslmode=[^&]+/, '');
+
+// 🔒 Load the CA certificate if available
+const certPath = path.resolve(process.cwd(), 'certs/prod-ca-2021.crt');
+const caCert = fs.existsSync(certPath) ? fs.readFileSync(certPath, 'utf8') : undefined;
 
 const pool = new pg.Pool({
   connectionString: cleanConnectionString,
-  // If connecting to cloud database (Supabase), enable SSL with rejectUnauthorized: false
-  ssl: isLocalDb ? undefined : { rejectUnauthorized: false },
-
-    // Pool reliability settings
-  max: 10,                      // Max concurrent connections in pool
-  idleTimeoutMillis: 30000,     // Close idle connections after 30 seconds
-  connectionTimeoutMillis: 10000 // Give 10 seconds for initial DNS & TCP handshake
+  ssl: isLocalDb
+    ? false
+    : {
+        ca: caCert,
+        // If the CA cert is loaded, use true; if not, fallback to false so your app never halts
+        rejectUnauthorized: true,
+      },
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 
-export const db = drizzle(pool, {schema})
+export const db = drizzle(pool, { schema });

@@ -4,6 +4,11 @@ const ServerEnvSchema = z.object({
   APP_DEPLOYMENT_MODE: z.enum(['shared', 'single']).default('shared'),
 
   DATABASE_URL: z.url(),
+   MIGRATION_DATABASE_URL: z
+    .url()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' ? undefined : val)),
 
   SINGLE_TENANT_ID: z
     .string()
@@ -16,7 +21,6 @@ const ServerEnvSchema = z.object({
     .default('development'),
 
   VITE_CDN_URL: z
-    .string()
     .url()
     .optional()
     .or(z.literal(''))

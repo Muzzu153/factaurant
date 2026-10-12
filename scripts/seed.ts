@@ -1,126 +1,220 @@
-import 'dotenv/config'
-import { db } from '@/core/db/client';
-import { tenants, products } from '../src/core/db/schema'
+import 'dotenv/config';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
+import fs from 'node:fs';
+import path from 'node:path';
+import * as schema from '../src/core/db/schema';
+import { tenants, products, orders, users } from '../src/core/db/schema';
+import bcrypt from 'bcryptjs';
 
-async function seed() {
-  console.log('🌱 Seeding test database...')
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-  const [pizzaKing] = await db
-    .insert(tenants)
-    .values({
-      slug: 'pizza-king',
-      name: 'Pizza King',
-      theme: {
-        colors: {
-          primary: '#FF0000',
-          secondary: '#FFD700',
-          tertiary: '#FFA500',
-          accent: '#8B0000',
-          text: '#000000',
-          background: '#FFFFFF',
-        },
-        borderRadius: { xsm: '2px', sm: '4px', md: '8px', lg: '16px', xl: '24px' },
-        fonts: { heading: 'sans-serif', body: 'sans-serif' },
-      },
-      blocks: {
-        nav_main: { type: 'navbar_simple', props: {} },
-        hero_main: {
-          type: 'hero_text',
-          props: { heading: 'Best Pizza in Town', ctaText: 'Order Now' },
-        },
-        menu_main: { type: 'menu_grid', props: { columns: 3 } },
-        footer_main: { type: 'footer_simple', props: { text: '© Test Pizza King' } },
-      },
-      pages: {
-        home: {
-          layout: {
-            header: ['nav_main', 'hero_main'],
-            main: ['menu_main'],
-            footer: ['footer_main'],
-          },
-        },
-      },
-    })
-    .returning()
+const connectionString = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
 
-  const [sushiMaster] = await db
-    .insert(tenants)
-    .values({
-      slug: 'sushi-master',
-      name: 'Sushi Master',
-      theme: {
-        colors: {
-          primary: '#000000',
-          secondary: '#FFFFFF',
-          tertiary: '#E0E0E0',
-          accent: '#E91E63',
-          text: '#212121',
-          background: '#F5F5F5',
-        },
-        borderRadius: { xsm: '1px', sm: '2px', md: '4px', lg: '8px', xl: '12px' },
-        fonts: { heading: 'serif', body: 'sans-serif' },
-      },
-      blocks: {
-        nav_main: { type: 'navbar_simple', props: {} },
-        hero_main: {
-          type: 'hero_text',
-          props: { heading: 'Authentic Japanese Sushi', ctaText: 'View Menu' },
-        },
-        menu_main: { type: 'menu_list', props: {} },
-        footer_main: { type: 'footer_simple', props: { text: '© Test Sushi Master' } },
-      },
-      pages: {
-        home: {
-          layout: {
-            header: ['nav_main', 'hero_main'],
-            main: ['menu_main'],
-            footer: ['footer_main'],
-          },
-        },
-      },
-    })
-    .returning()
-
-  await db.insert(products).values([
-    {
-      tenantId: pizzaKing.id,
-      name: 'Margherita Pizza',
-      description: 'Classic tomato and mozzarella',
-      price: 1299, // cents
-      imageUrl: null,
-      isAvailable: true,
-    },
-    {
-      tenantId: pizzaKing.id,
-      name: 'Pepperoni Pizza',
-      description: 'Loaded with pepperoni',
-      price: 1499,
-      imageUrl: null,
-      isAvailable: true,
-    },
-    {
-      tenantId: sushiMaster.id,
-      name: 'California Roll',
-      description: 'Crab, avocado, cucumber',
-      price: 899,
-      imageUrl: null,
-      isAvailable: true,
-    },
-    {
-      tenantId: sushiMaster.id,
-      name: 'Salmon Nigiri',
-      description: 'Fresh salmon over rice',
-      price: 699,
-      imageUrl: null,
-      isAvailable: true,
-    },
-  ])
-
-  console.log(`✅ Seeded 2 tenants (${pizzaKing.slug}, ${sushiMaster.slug}) and 4 products`)
-  process.exit(0)
+if (!connectionString) {
+  throw new Error('❌ MIGRATION_DATABASE_URL is missing in .env!');
 }
 
-seed().catch((err) => {
-  console.error('❌ Seed failed:', err)
-  process.exit(1)
-})
+const cleanConnectionString = connectionString.replace(/[\?&]sslmode=[^&]+/, '');
+
+// Load CA certificate if present
+const certPath = path.resolve(process.cwd(), 'certs/prod-ca-2021.crt');
+const caCert = fs.existsSync(certPath) ? fs.readFileSync(certPath, 'utf8') : undefined;
+
+const pool = new pg.Pool({
+  connectionString: cleanConnectionString,
+  ssl: {
+    ca: caCert,
+    rejectUnauthorized: true,
+  },
+});
+
+const adminDb = drizzle(pool, { schema });
+
+async function seed() {
+  console.log('🌱 Seeding test database with verified SSL connection...');
+  try {
+    // 1. Wipe in reverse foreign-key order
+    await adminDb.delete(orders);
+    await adminDb.delete(products);
+    await adminDb.delete(users);
+    await adminDb.delete(tenants);
+    console.log('🧹 Cleaned existing records.');
+
+    // 2. Insert Pizza King
+    const [pizzaTenant] = await adminDb
+      .insert(tenants)
+      .values({
+        name: 'Pizza King',
+        slug: 'pizza-king',
+        theme: {
+          colors: {
+            primary: '#e11d48',
+            secondary: '#ffd700',
+            tertiary: '#ffa500',
+            accent: '#8b0000',
+            text: '#000000',
+            background: '#fff1f2',
+          },
+          borderRadius: {
+            xsm: '2px',
+            sm: '4px',
+            md: '8px',
+            lg: '16px',
+            xl: '24px',
+          },
+          fonts: {
+            heading: 'sans-serif',
+            body: 'sans-serif',
+          },
+        },
+        blocks: {
+          hero_1: {
+            type: 'hero_video',
+            props: {
+              videoUrl: 'https://videos.pexels.com/video-files/3195655/3195655-uhd_2560_1440_25fps.mp4',
+              heading: 'Hot & Fresh',
+              ctaText: 'Order Now',
+            },
+          },
+          menu_1: {
+            type: 'menu_grid',
+            props: { columns: 3 },
+          },
+          nav_1: { type: 'navbar_simple', props: {} },
+          footer_1: { type: 'footer_simple', props: { text: '© 2026 Pizza King' } },
+        },
+        pages: {
+          home: {
+            layout: {
+              header: ['nav_1', 'hero_1'],
+              main: ['menu_1'],
+              footer: ['footer_1'],
+            },
+            meta: { title: 'Pizza King - Home', description: 'Best pizza in town' },
+          },
+        },
+      })
+      .returning();
+
+    // 3. Insert Sushi Master
+    const [sushiTenant] = await adminDb
+      .insert(tenants)
+      .values({
+        name: 'Sushi Master',
+        slug: 'sushi-master',
+        theme: {
+          colors: {
+            primary: '#0f172a',
+            secondary: '#38bdf8',
+            tertiary: '#0284c7',
+            accent: '#0369a1',
+            text: '#0f172a',
+            background: '#f8fafc',
+          },
+          borderRadius: {
+            xsm: '0px',
+            sm: '0px',
+            md: '0px',
+            lg: '0px',
+            xl: '0px',
+          },
+          fonts: {
+            heading: 'serif',
+            body: 'sans-serif',
+          },
+        },
+        blocks: {
+          hero_main: {
+            type: 'hero_text',
+            props: {
+              heading: 'Artisan Sushi',
+              subheading: 'Experience the taste of Japan',
+            },
+          },
+          menu_main: {
+            type: 'menu_list',
+            props: {},
+          },
+          nav_main: { type: 'navbar_simple', props: {} },
+          footer_main: { type: 'footer_simple', props: { text: '© 2026 Sushi Master' } },
+        },
+        pages: {
+          home: {
+            layout: {
+              header: ['nav_main', 'hero_main'],
+              main: ['menu_main'],
+              footer: ['footer_main'],
+            },
+            meta: { title: 'Sushi Master - Home', description: 'Fresh artisan sushi' },
+          },
+        },
+      })
+      .returning();
+
+    // 4. Insert Default Admin Users
+    const defaultPasswordHash = await bcrypt.hash('Password123!', 10);
+    await adminDb.insert(users).values([
+      {
+        tenantId: pizzaTenant.id,
+        name: 'Mario Rossi',
+        email: 'admin@pizzaking.com',
+        passwordHash: defaultPasswordHash,
+        role: 'owner',
+      },
+      {
+        tenantId: sushiTenant.id,
+        name: 'Kenji Sato',
+        email: 'admin@sushimaster.com',
+        passwordHash: defaultPasswordHash,
+        role: 'owner',
+      },
+    ]);
+    console.log('👤 Created default store owners.');
+
+    // 5. Insert Products
+    await adminDb.insert(products).values([
+      {
+        tenantId: pizzaTenant.id,
+        name: 'Pepperoni Blast',
+        description: 'Double cheese, double pepperoni, crispy crust.',
+        price: 1899,
+        imageUrl: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=1000',
+        isAvailable: true,
+      },
+      {
+        tenantId: pizzaTenant.id,
+        name: 'Veggie Supreme',
+        description: 'Mushrooms, onions, peppers, and olives.',
+        price: 1599,
+        imageUrl: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?q=80&w=1000',
+        isAvailable: true,
+      },
+      {
+        tenantId: sushiTenant.id,
+        name: 'Dragon Roll',
+        description: 'Eel, cucumber, topped with avocado.',
+        price: 2200,
+        imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=1000',
+        isAvailable: true,
+      },
+      {
+        tenantId: sushiTenant.id,
+        name: 'Salmon Nigiri',
+        description: 'Fresh Atlantic salmon on rice.',
+        price: 800,
+        imageUrl: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd43ea?q=80&w=1000',
+        isAvailable: true,
+      },
+    ]);
+    console.log('🍕 Created products for Pizza King & Sushi Master.');
+
+    console.log('✅ Seed completed successfully with strict SSL verification!');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Seed failed:', error);
+    process.exit(1);
+  }
+}
+
+seed();

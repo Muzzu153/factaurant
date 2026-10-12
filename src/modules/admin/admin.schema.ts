@@ -15,7 +15,7 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024;
 export const GetPresignedUrlSchema = z.object({
   fileName: z.string().min(1, 'File name is required'),
   fileType: z.enum(ALLOWED_IMAGE_TYPES, {
-    errorMap: () => ({ message: 'Invalid file type. Only JPG, PNG, WebP, and AVIF are allowed.' }),
+    message: 'Invalid file type. Only JPG, PNG, WebP, and AVIF are allowed.',
   }),
   fileSize: z
     .number()

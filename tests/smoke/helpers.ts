@@ -53,78 +53,6 @@ export async function checkURL(
 }
 
 /**
- * Check if an API endpoint returns valid JSON
- */
-// export async function checkAPI<T = any>(
-//     url: string,
-//     options: { timeout?: number; validator?: (data: T) => boolean } = {}
-// ): Promise<{
-//     ok: boolean
-//     status: number
-//     responseTime: number
-//     data?: T
-//     error?: string
-// }> {
-//     const { timeout = 5000, validator } = options
-//     const startTime = Date.now()
-
-//     try {
-//         const response = await fetch(url, {
-//             method: 'GET',
-//             signal: AbortSignal.timeout(timeout),
-//             headers: {
-//                 'Accept': 'application/json',
-//                 'User-Agent': 'SaaS-Smoke-Test/1.0',
-//             },
-//         }
-//         )
-//         console.log(response)
-
-//         const responseTime = Date.now() - startTime
-
-//         if (!response.ok) {
-//             console.log('response is not okay')
-
-//             return {
-//                 ok: false,
-//                 status: response.status,
-//                 responseTime,
-//                 error: `HTTP ${response.status}`,
-//             }
-//         }
-
-//         const data = await response.json()
-
-//         // Optional validation
-//         if (validator && !validator(data)) {
-//             return {
-//                 ok: false,
-//                 status: response.status,
-//                 responseTime,
-//                 data,
-//                 error: 'Validation failed',
-//             }
-//         }
-
-//         return {
-//             ok: true,
-//             status: response.status,
-//             responseTime,
-//             data,
-//         }
-//     } catch (error) {
-//         const responseTime = Date.now() - startTime
-
-//         return {
-//             ok: false,
-//             status: 0,
-//             responseTime,
-//             error: error instanceof Error ? error.message : String(error),
-//         }
-//     }
-// }
-
-/**
  * Format response time with color coding
  */
 export function formatResponseTime(ms: number): string {
@@ -177,4 +105,15 @@ export async function retry<T>(
     }
 
     throw lastError!
+}
+
+export const BASE_URL = process.env.TEST_APP_URL || 'http://localhost:3000';
+
+export async function checkServerAvailable(url: string = BASE_URL): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    return res.ok || res.status === 404 || res.status === 500;
+  } catch {
+    return false;
+  }
 }

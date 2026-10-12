@@ -1,89 +1,11 @@
 {
-  "id": "1d89d218-a31b-46c2-abb8-1b11b04e4da5",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "prevId": "",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.orders": {
-      "name": "orders",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenantId": {
-          "name": "tenantId",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "customer_name": {
-          "name": "customer_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "customer_address": {
-          "name": "customer_address",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "items": {
-          "name": "items",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "total_amount": {
-          "name": "total_amount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'pending'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "orders_tenantId_tenants_id_fk": {
-          "name": "orders_tenantId_tenants_id_fk",
-          "tableFrom": "orders",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenantId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.products": {
-      "name": "products",
+    "public.users": {
+      "name": "users",
       "schema": "",
       "columns": {
         "id": {
@@ -93,9 +15,21 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "tenantId": {
-          "name": "tenantId",
+        "tenant_id": {
+          "name": "tenant_id",
           "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -105,53 +39,91 @@
           "primaryKey": false,
           "notNull": true
         },
-        "description": {
-          "name": "description",
+        "role": {
+          "name": "role",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "price": {
-          "name": "price",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "image-url": {
-          "name": "image-url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_available": {
-          "name": "is_available",
-          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": true
+          "default": "'owner'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "tenant_email_idx": {
+          "name": "tenant_email_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops",
+              "isExpression": false
+            },
+            {
+              "expression": "email",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "products_tenantId_tenants_id_fk": {
-          "name": "products_tenantId_tenants_id_fk",
-          "tableFrom": "products",
+        "users_tenant_id_tenants_id_fk": {
+          "name": "users_tenant_id_tenants_id_fk",
+          "tableFrom": "users",
           "tableTo": "tenants",
+          "schemaTo": "public",
           "columnsFrom": [
-            "tenantId"
+            "tenant_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "policies": {
+        "factaurant_app_users_isolation": {
+          "name": "factaurant_app_users_isolation",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "factaurant_app"
+          ]
+        },
+        "smoke_reader_can_read_users": {
+          "name": "smoke_reader_can_read_users",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "smoke_reader"
+          ]
+        }
+      },
+      "isRLSEnabled": true
     },
     "public.tenants": {
       "name": "tenants",
@@ -182,8 +154,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "layout": {
-          "name": "layout",
+        "blocks": {
+          "name": "blocks",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pages": {
+          "name": "pages",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
@@ -194,16 +172,238 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "tenants_slug_unique": {
-          "name": "tenants_slug_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "slug"
+          ],
+          "nullsNotDistinct": false,
+          "name": "tenants_slug_unique"
+        }
+      },
+      "checkConstraints": {},
+      "policies": {
+        "smoke_reader_can_read_tenants": {
+          "name": "smoke_reader_can_read_tenants",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "smoke_reader"
           ]
         }
       },
-      "policies": {},
+      "isRLSEnabled": true
+    },
+    "public.orders": {
+      "name": "orders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_name": {
+          "name": "customer_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_address": {
+          "name": "customer_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "items": {
+          "name": "items",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subtotal_amount": {
+          "name": "subtotal_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "discount_amount": {
+          "name": "discount_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "tax_amount": {
+          "name": "tax_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "total_amount": {
+          "name": "total_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "orders_tenant_id_tenants_id_fk": {
+          "name": "orders_tenant_id_tenants_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "tenants",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "policies": {
+        "factaurant_app_orders_isolation": {
+          "name": "factaurant_app_orders_isolation",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "factaurant_app"
+          ]
+        },
+        "smoke_reader_can_read_tenants": {
+          "name": "smoke_reader_can_read_tenants",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "smoke_reader"
+          ]
+        },
+        "smoke_reader_can_read_orders": {
+          "name": "smoke_reader_can_read_orders",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "smoke_reader"
+          ]
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.products": {
+      "name": "products",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price": {
+          "name": "price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_available": {
+          "name": "is_available",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "products_tenant_id_tenants_id_fk": {
+          "name": "products_tenant_id_tenants_id_fk",
+          "tableFrom": "products",
+          "tableTo": "tenants",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {
+        "factaurant_app_products_isolation": {
+          "name": "factaurant_app_products_isolation",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "factaurant_app"
+          ]
+        },
+        "smoke_reader_can_read_products": {
+          "name": "smoke_reader_can_read_products",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "smoke_reader"
+          ]
+        }
+      },
+      "isRLSEnabled": true
     }
   },
   "enums": {},
@@ -213,8 +413,11 @@
   "policies": {},
   "views": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
     "tables": {}
   }
 }
