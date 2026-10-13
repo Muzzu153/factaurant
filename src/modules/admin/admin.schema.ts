@@ -26,9 +26,10 @@ export const GetPresignedUrlSchema = z.object({
 
 export type GetPresignedUrlInput = z.infer<typeof GetPresignedUrlSchema>;
 
-// ... Keep ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE, and GetPresignedUrlSchema ...
+// 🟢 4. DIETARY CLASSIFICATION ENUM
+export const DIETARY_TYPES = ['veg', 'non_veg', 'contains_egg', 'vegan'] as const;
 
-// 4. SCHEMA FOR CREATING A PRODUCT
+// 🍕 5. SCHEMA FOR CREATING A PRODUCT (Updated with categoryId & dietaryType!)
 export const CreateProductSchema = z.object({
   name: z
     .string()
@@ -42,11 +43,51 @@ export const CreateProductSchema = z.object({
     .optional(),
   price: z
     .number()
-    .int('Price must be an integer in cents (e.g. 1499 for $14.99)')
+    .int('Price must be an integer in cents/paise (e.g. 1499 for $14.99 / ₹14.99)')
     .positive('Price must be greater than zero'),
   imageUrl: z
     .string()
     .url('A valid image URL is required'),
+  // ⚡ New Fields:
+  categoryId: z
+    .string()
+    .uuid('Invalid category ID')
+    .optional(),
+  dietaryType: z
+    .enum(DIETARY_TYPES)
+    .default('veg'),
 });
 
 export type CreateProductInput = z.infer<typeof CreateProductSchema>;
+
+// ... keep existing schemas (GetPresignedUrlSchema, CreateProductSchema) ...
+
+// ⚡ 6. SCHEMA FOR 1-CLICK AVAILABILITY TOGGLE (86ing)
+export const ToggleProductAvailabilitySchema = z.object({
+  productId: z.string().uuid('Invalid product ID'),
+  isAvailable: z.boolean(),
+});
+
+export type ToggleProductAvailabilityInput = z.infer<typeof ToggleProductAvailabilitySchema>;
+
+// 📂 7. SCHEMA FOR CREATING A CATEGORY
+export const CreateCategorySchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Category name must be at least 2 characters')
+    .max(50, 'Category name cannot exceed 50 characters'),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(2, 'Slug must be at least 2 characters')
+    .max(50, 'Slug cannot exceed 50 characters')
+    .regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
+  displayOrder: z
+    .number()
+    .int()
+    .default(0),
+});
+
+export type CreateCategoryInput = z.infer<typeof CreateCategorySchema>;

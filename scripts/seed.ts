@@ -173,38 +173,94 @@ async function seed() {
     console.log('👤 Created default store owners.');
 
     // 5. Insert Products
+    // In scripts/seed.ts - inside products insert array:
     await adminDb.insert(products).values([
       {
         tenantId: pizzaTenant.id,
         name: 'Pepperoni Blast',
-        description: 'Double cheese, double pepperoni, crispy crust.',
-        price: 1899,
+        description: 'Double cheese, spicy pepperoni, herb-infused tomato sauce.',
+        price: 29900, // Base price: ₹299.00
         imageUrl: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=1000',
+        dietaryType: 'non_veg',
         isAvailable: true,
+        // Modifier configuration
+        modifierGroups: [
+          {
+            id: 'size_group',
+            name: 'Select Size',
+            minSelection: 1, // Mandatory
+            maxSelection: 1, // Single choice (Radio)
+            options: [
+              { id: 'size_reg', name: 'Regular (8")', price: 0, isDefault: true },
+              { id: 'size_med', name: 'Medium (10")', price: 15000 }, // +₹150.00
+              { id: 'size_lge', name: 'Large (12")', price: 28000 },  // +₹280.00
+            ],
+          },
+          {
+            id: 'crust_group',
+            name: 'Crust Choice',
+            minSelection: 1,
+            maxSelection: 1,
+            options: [
+              { id: 'crust_pan', name: 'Classic Pan Crust', price: 0, isDefault: true },
+              { id: 'crust_thin', name: 'Crispy Thin Crust', price: 3000 }, // +₹30.00
+              { id: 'crust_burst', name: 'Cheese Burst Crust', price: 9900 }, // +₹99.00
+            ],
+          },
+          {
+            id: 'addons_group',
+            name: 'Extra Toppings',
+            minSelection: 0, // Optional
+            maxSelection: 4, // Multi-select (Checkbox)
+            options: [
+              { id: 'addon_cheese', name: 'Extra Mozzarella', price: 5000 }, // +₹50.00
+              { id: 'addon_jalapeno', name: 'Pickled Jalapenos', price: 3500 }, // +₹35.00
+              { id: 'addon_mushrooms', name: 'Fresh Mushrooms', price: 4000 }, // +₹40.00
+            ],
+          },
+        ],
       },
       {
         tenantId: pizzaTenant.id,
         name: 'Veggie Supreme',
-        description: 'Mushrooms, onions, peppers, and olives.',
-        price: 1599,
+        description: 'Loaded with bell peppers, red onions, mushrooms, and golden corn.',
+        price: 24900, // ₹249.00
         imageUrl: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?q=80&w=1000',
+        dietaryType: 'veg',
         isAvailable: true,
+        modifierGroups: [
+          {
+            id: 'size_group',
+            name: 'Select Size',
+            minSelection: 1,
+            maxSelection: 1,
+            options: [
+              { id: 'size_reg', name: 'Regular (8")', price: 0, isDefault: true },
+              { id: 'size_med', name: 'Medium (10")', price: 13000 },
+              { id: 'size_lge', name: 'Large (12")', price: 24000 },
+            ],
+          },
+        ],
       },
       {
         tenantId: sushiTenant.id,
         name: 'Dragon Roll',
-        description: 'Eel, cucumber, topped with avocado.',
-        price: 2200,
+        description: 'Eel and cucumber topped with sliced avocado and sweet unagi glaze.',
+        price: 45000,
         imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=1000',
+        dietaryType: 'non_veg',
         isAvailable: true,
+        modifierGroups: [], // No modifiers
       },
       {
         tenantId: sushiTenant.id,
         name: 'Salmon Nigiri',
-        description: 'Fresh Atlantic salmon on rice.',
-        price: 800,
+        description: 'Fresh Atlantic salmon over hand-pressed seasoned sushi rice.',
+        price: 32000,
         imageUrl: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd43ea?q=80&w=1000',
+        dietaryType: 'non_veg',
         isAvailable: true,
+        modifierGroups: [], // No modifiers
       },
     ]);
     console.log('🍕 Created products for Pizza King & Sushi Master.');

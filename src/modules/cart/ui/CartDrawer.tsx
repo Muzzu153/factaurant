@@ -28,7 +28,7 @@ export function CartDrawer() {
       setError(null)
 
       // 1. Call the Server Function
-      await placeOrder({
+      const result = await placeOrder({
         data: {
           customerName: formData.name,
           customerAddress: formData.address,
@@ -46,6 +46,7 @@ export function CartDrawer() {
       cartService.clear() // Clear the store
       cartService.toggle() // Close the drawer
       setFormData({ name: '', address: '' }) // Reset form
+      window.location.href = `/orders/${result.orderId}`;
     } catch (err: any) {
       console.error(err)
       // If Zod validation fails, we can show specific errors here

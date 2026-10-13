@@ -4,9 +4,10 @@ import { eq } from "drizzle-orm";
 import { notFound } from "@tanstack/react-router";
 import { tenants } from "../../core/db/schema.ts";
 import { publicFn } from "../../core/runtime/serverFns";
+import { createServerFn } from "@tanstack/react-start";
 
 //  This function runs only on the server.
-export const getTenant = publicFn.handler(async () => {
+export const getTenant = createServerFn({method: 'GET'}).handler(async () => {
     try {
 
         // GET the host headers

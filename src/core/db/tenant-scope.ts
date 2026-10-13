@@ -1,6 +1,6 @@
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, sql, asc } from 'drizzle-orm';
 import { db } from './client';
-import { products, orders, tenants, users } from './schema';
+import { products, orders, tenants, users, categories } from './schema';
 
 // This is the "Safe DB" type
 export type TenantScope = ReturnType<typeof createTenantScope>;
@@ -28,22 +28,84 @@ export function createTenantScope(tenantId: string) {
 
   return {
     // PRODUCT REPOSITORY
-    products: {
+     categories: {
       findMany: async () => {
-        // ⚡ MUST use withTenantSession so PostgreSQL RLS engine sees app.current_tenant_id!
         return withTenantSession(async (tx) => {
           return await tx
             .select()
+            .from(categories)
+            .where(and(eq(categories.tenantId, tenantId), eq(categories.isActive, true)))
+            .orderBy(asc(categories.displayOrder)); // Starters -> Mains -> Desserts
+        });
+      },
+      create: async (data: Omit<typeof categories.$inferInsert, 'tenantId'>) => {
+        return withTenantSession(async (tx) => {
+          const [newCategory] = await tx
+            .insert(categories)
+            .values({ ...data, tenantId })
+            .returning();
+          return newCategory;
+        });
+      },
+
+      
+     // ⚡ SURGICAL AVAILABILITY TOGGLE (1-Click 86ing)
+      toggleAvailability: async (productId: string, isAvailable: boolean) => {
+        return withTenantSession(async (tx) => {
+          const [updated] = await tx
+            .update(products)
+            .set({ isAvailable })
+            .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
+            .returning();
+          return updated || null;
+        });
+      },
+    },
+
+
+  products: {
+      // Find all products with optional category or availability filter
+      findMany: async (filter?: { categoryId?: string; isAvailableOnly?: boolean }) => {
+        return withTenantSession(async (tx) => {
+          const conditions = [eq(products.tenantId, tenantId)];
+
+          if (filter?.categoryId) {
+            conditions.push(eq(products.categoryId, filter.categoryId));
+          }
+
+          if (filter?.isAvailableOnly) {
+            conditions.push(eq(products.isAvailable, true));
+          }
+
+          return await tx
+            .select()
             .from(products)
-            .where(eq(products.tenantId, tenantId));
+            .where(and(...conditions));
         });
       },
 
       create: async (data: Omit<typeof products.$inferInsert, 'tenantId'>) => {
         return withTenantSession(async (tx) => {
-          return await tx.insert(products).values({ ...data, tenantId }).returning();
+          const [newProduct] = await tx
+            .insert(products)
+            .values({ ...data, tenantId })
+            .returning();
+          return newProduct;
         });
       },
+
+      // ⚡ SURGICAL AVAILABILITY TOGGLE (1-Click 86ing)
+      toggleAvailability: async (productId: string, isAvailable: boolean) => {
+        return withTenantSession(async (tx) => {
+          const [updated] = await tx
+            .update(products)
+            .set({ isAvailable })
+            .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
+            .returning();
+          return updated || null;
+        });
+      },
+    
 
       update: async (id: string, data: Partial<Omit<typeof products.$inferInsert, "tenantId" | "id" | "createdAt">>) => {
         const updated = await db
@@ -90,7 +152,19 @@ export function createTenantScope(tenantId: string) {
             .orderBy(desc(orders.createdAt));
         });
       },
-      // ⚡ FIX: Must use withTenantSession and `tx.insert` so RLS WITH CHECK passes!
+
+        //  Find single order (strictly within this tenant)
+      findById: async (orderId: string) => {
+        return withTenantSession(async (tx) => {
+          const [order] = await tx
+            .select()
+            .from(orders)
+            .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
+          return order || null;
+        });
+      },
+
+      // FIX: Must use withTenantSession and `tx.insert` so RLS WITH CHECK passes!
       create: async (data: Omit<typeof orders.$inferInsert, 'tenantId'>) => {
         return withTenantSession(async (tx) => {
           return await tx
@@ -100,21 +174,18 @@ export function createTenantScope(tenantId: string) {
         });
       },
 
-      updateStatus: async (id: string, status: string) => {
-        const updated = await db
-          .update(orders)
-          .set({ status, })
-          .where(
-            and(
-              eq(orders.id, id),
-              eq(orders.tenantId, tenantId),
-            )
-          )
-          .returning()
-
-        return updated
+       // ⚡ Update kitchen status
+      updateStatus: async (orderId: string, status: string) => {
+        return withTenantSession(async (tx) => {
+          const [updated] = await tx
+            .update(orders)
+            .set({ status })
+            .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+            .returning();
+          return updated || null;
+        });
       },
-
+      
       delete: async (id: string) => {
         const deleted = await db
           .delete(orders)

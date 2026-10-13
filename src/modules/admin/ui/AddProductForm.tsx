@@ -1,17 +1,29 @@
 import { useState, useRef } from 'react';
-import { getPresignedUploadUrl, createProduct } from '../admin.server';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getCategories } from '@/modules/menu/menu.server';
+import { getPresignedUploadUrl, createProduct, createCategory } from '../admin.server';
+import { DietaryBadge } from '@/modules/menu/ui/DietaryBadge';
+import { DIETARY_TYPES } from '../admin.schema';
 
 interface AddProductFormProps {
   onSuccess?: () => void;
 }
 
 export function AddProductForm({ onSuccess }: AddProductFormProps) {
+  const queryClient = useQueryClient();
+
   // Form State
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [dollars, setDollars] = useState(''); // e.g. "14.99"
-  
-  // File & Upload State
+  const [dollars, setDollars] = useState('');
+  const [categoryId, setCategoryId] = useState<string>('');
+  const [dietaryType, setDietaryType] = useState<'veg' | 'non_veg' | 'contains_egg' | 'vegan'>('veg');
+
+  // Quick Category Creator State
+  const [showNewCatInput, setShowNewCatInput] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+
+  // File Upload State
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,25 +32,45 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. HANDLE LOCAL FILE SELECTION
+  // 1. Fetch Categories for dropdown
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => getCategories(),
+  });
+
+  // 2. Quick Create Category Mutation
+  const addCategoryMutation = useMutation({
+    mutationFn: async (catName: string) => {
+      const slug = catName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+      return await createCategory({
+        data: { name: catName, slug, displayOrder: (categories?.length || 0) + 1 },
+      });
+    },
+    onSuccess: (newCat) => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setCategoryId(newCat.id);
+      setNewCatName('');
+      setShowNewCatInput(false);
+    },
+    onError: (err: any) => {
+      alert(`Failed to create category: ${err.message}`);
+    },
+  });
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     const selectedFile = e.target.files?.[0];
-    
     if (!selectedFile) return;
 
-    // Validate size on client first (5MB max)
     if (selectedFile.size > 5 * 1024 * 1024) {
       setError('File size exceeds 5MB limit.');
       return;
     }
 
     setFile(selectedFile);
-    // Instant zero-latency local preview
     setPreviewUrl(URL.createObjectURL(selectedFile));
   };
 
-  // 2. SUBMIT PIPELINE (Presigned Upload + DB Write)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -51,18 +83,18 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
 
     const parsedDollars = parseFloat(dollars);
     if (isNaN(parsedDollars) || parsedDollars <= 0) {
-      setError('Please enter a valid price greater than $0.');
+      setError('Please enter a valid price greater than 0.');
       return;
     }
 
-    // 💰 CONVERT DOLLARS TO INTEGER CENTS ($14.99 -> 1499)
+    // Convert to integer cents / paise
     const priceInCents = Math.round(parsedDollars * 100);
 
     try {
       setIsSubmitting(true);
 
-      // --- PHASE A: REQUEST PRESIGNED UPLOAD TICKET ---
-      setStatusMessage('Requesting upload permission...');
+      // A. Get presigned upload URL from server
+      setStatusMessage('Requesting storage permission...');
       const { uploadUrl, publicUrl } = await getPresignedUploadUrl({
         data: {
           fileName: file.name,
@@ -71,80 +103,72 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
         },
       });
 
-      // --- PHASE B: DIRECT HTTP PUT TO CLOUDFLARE R2 ---
-      setStatusMessage('Uploading image directly to Cloudflare R2...');
-      const uploadResponse = await fetch(uploadUrl, {
+      // B. Upload file directly to Cloudflare R2
+      setStatusMessage('Uploading image to cloud...');
+      const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
-        headers: {
-          // ⚡ Critical: Content-Type must strictly match what was signed in the PutObjectCommand
-          'Content-Type': file.type,
-        },
+        headers: { 'Content-Type': file.type },
       });
 
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload to storage failed (${uploadResponse.statusText}). Check bucket CORS settings.`);
+      if (!uploadRes.ok) {
+        throw new Error('Image upload failed. Please check storage configuration.');
       }
 
-      // --- PHASE C: PERSIST PRODUCT RECORD IN POSTGRESQL ---
+      // C. Save Product to Database with Category & Dietary tags
       setStatusMessage('Saving item to database...');
       await createProduct({
         data: {
           name,
           description: description.trim() || undefined,
           price: priceInCents,
-          imageUrl: publicUrl, // Storing the permanent Cloudflare URL
+          imageUrl: publicUrl,
+          categoryId: categoryId || undefined,
+          dietaryType,
         },
       });
 
-      // --- PHASE D: RESET FORM ---
+      // Reset
       setName('');
       setDescription('');
       setDollars('');
       setFile(null);
       setPreviewUrl(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      
-      setStatusMessage('✅ Product created successfully!');
-      if (onSuccess) onSuccess();
 
+      queryClient.invalidateQueries({ queryKey: ['menu'] });
+      setStatusMessage('✅ Dish added to menu successfully!');
+      if (onSuccess) onSuccess();
     } catch (err: any) {
-      console.error('Failed to create product:', err);
-      setError(err.message || 'An unexpected error occurred.');
+      console.error(err);
+      setError(err.message || 'An error occurred while creating the product.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm font-sans mb-8">
-      <h3 className="text-lg font-bold text-slate-900 mb-4">Add New Menu Item</h3>
+    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-xs font-sans mb-8">
+      <h3 className="text-lg font-bold text-slate-900 mb-4">Add Menu Item</h3>
 
-      {/* Error Message Box */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md">
           {error}
         </div>
       )}
 
-      {/* Progress Status Message */}
       {statusMessage && !error && (
-        <div className="mb-4 p-3 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-md font-medium">
+        <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-md font-medium">
           {statusMessage}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        
-        {/* Media Upload Area */}
-        <div className="border-2 border-dashed border-slate-200 p-6 rounded-md text-center bg-slate-50 hover:bg-slate-100/50 transition">
+        {/* 1. Image Upload Box */}
+        <div className="border-2 border-dashed border-slate-200 p-4 rounded-md text-center bg-slate-50">
           {previewUrl ? (
-            <div className="flex flex-col items-center gap-3">
-              <img 
-                src={previewUrl} 
-                alt="Local preview" 
-                className="h-32 w-32 object-cover rounded-md border border-slate-300 shadow-sm" 
-              />
+            <div className="flex flex-col items-center gap-2">
+              <img src={previewUrl} alt="Preview" className="h-28 w-28 object-cover rounded-md border" />
               <button
                 type="button"
                 onClick={() => {
@@ -152,73 +176,140 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
                   setPreviewUrl(null);
                   if (fileInputRef.current) fileInputRef.current.value = '';
                 }}
-                className="text-xs text-red-600 font-medium hover:underline"
+                className="text-xs text-red-600 hover:underline"
               >
-                Remove image & choose another
+                Remove image
               </button>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center">
-              <p className="text-xs text-slate-500 mb-3">Upload JPG, PNG, or WebP up to 5MB</p>
+            <div>
+              <p className="text-xs text-slate-500 mb-2">Upload image up to 5MB</p>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/avif"
                 onChange={handleFileChange}
-                className="text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer"
+                className="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white cursor-pointer"
               />
             </div>
           )}
         </div>
 
-        {/* Name & Price Inputs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 2. Name & Price */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Item Name</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Item Name</label>
             <input
               type="text"
-              placeholder="e.g. Truffle Mushroom Pizza"
+              placeholder="e.g. Paneer Tikka Pizza"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
+              className="w-full p-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-slate-900"
               required
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Price ($ USD)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Price (₹ or $)</label>
             <input
               type="number"
               step="0.01"
               min="0.01"
-              placeholder="21.50"
+              placeholder="299.00"
               value={dollars}
               onChange={(e) => setDollars(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
+              className="w-full p-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-slate-900"
               required
             />
           </div>
         </div>
 
-        {/* Description Input */}
+        {/* 3. Category Dropdown & Quick Create */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-semibold text-slate-700">Category</label>
+            <button
+              type="button"
+              onClick={() => setShowNewCatInput((prev) => !prev)}
+              className="text-[11px] text-primary hover:underline font-medium"
+            >
+              {showNewCatInput ? 'Cancel' : '+ Add New Category'}
+            </button>
+          </div>
+
+          {showNewCatInput ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Category name (e.g. Desserts)"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                className="flex-1 p-2 border border-slate-300 rounded-md text-xs"
+              />
+              <button
+                type="button"
+                onClick={() => newCatName.trim() && addCategoryMutation.mutate(newCatName.trim())}
+                disabled={addCategoryMutation.isPending || !newCatName.trim()}
+                className="px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-md disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          ) : (
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="w-full p-2 border border-slate-300 rounded-md text-xs bg-white"
+            >
+              <option value="">Uncategorized (General Menu)</option>
+              {categories?.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* 4. 🟢 FSSAI Dietary Selection */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-2">Dietary Classification</label>
+          <div className="grid grid-cols-2 gap-2">
+            {DIETARY_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setDietaryType(type)}
+                className={`flex items-center gap-2 p-2 rounded-md border text-xs font-medium transition cursor-pointer ${
+                  dietaryType === type
+                    ? 'border-slate-900 bg-slate-900/5 text-slate-900 font-semibold'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <DietaryBadge dietaryType={type} />
+                <span className="capitalize">{type.replace('_', ' ')}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 5. Description */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
           <textarea
-            placeholder="Wild forest mushrooms, black truffle oil, fresh mozzarella..."
+            placeholder="Ingredients, preparation details, allergens..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="w-full p-2 border border-slate-300 rounded-md text-xs"
             rows={2}
           />
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={isSubmitting || !file}
-          className="w-full py-2.5 bg-slate-900 text-white font-semibold rounded-md hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="w-full py-2.5 bg-slate-900 text-white font-semibold rounded-md text-xs hover:bg-slate-800 disabled:opacity-50 cursor-pointer transition"
         >
-          {isSubmitting ? 'Processing...' : 'Add Item to Menu'}
+          {isSubmitting ? 'Publishing Dish...' : 'Publish to Menu'}
         </button>
       </form>
     </div>

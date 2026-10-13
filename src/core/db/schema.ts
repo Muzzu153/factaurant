@@ -1,16 +1,39 @@
-import { CartItem } from '@/modules/orders/order.schema';
 import {
   pgTable,
   text,
   uuid,
-  jsonb,
-  timestamp,
   integer,
+  jsonb,
   boolean,
+  timestamp,
   uniqueIndex,
   pgPolicy,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+
+// 1. MODIFIER & CUSTOMIZATION TYPES
+export type ModifierOption = {
+  id: string;
+  name: string;
+  price: number; // Additional price in integer cents / paise
+  isDefault?: boolean;
+};
+
+export type ModifierGroup = {
+  id: string;
+  name: string; // e.g., "Select Size", "Crust Choice", "Extra Add-ons"
+  minSelection: number; // 1 for mandatory single-choice (radio), 0 for optional
+  maxSelection: number; // 1 for single-choice (radio), >1 for multi-choice (checkbox)
+  options: ModifierOption[];
+};
+
+export type SelectedModifier = {
+  groupId: string;
+  groupName: string;
+  optionId: string;
+  optionName: string;
+  price: number; // Price of this specific modifier in cents / paise
+};
 
 // 1. Define TYPES FOR TYPESCRIPT INTELLISENSE
 export type Block = {
@@ -31,28 +54,37 @@ export type PageLayout = {
   };
 };
 
+//  EXISTING CHECKOUT ITEM TYPE
+
+// ⚡ Define CartItem directly in core so schema never depends on modules/orders
+export type CartItem = {
+  productId: string;
+  name: string;
+  basePrice: number; // Base product price in cents / paise
+  price: number; // Total unit price (basePrice + all selected modifier prices)
+  quantity: number;
+  imageUrl?: string | null;
+   selectedModifiers?: SelectedModifier[];
+  itemInstructions?: string; // Special customer cooking instructions
+};
+
 // ==============================================================================
-// 🛡️ REUSABLE MULTI-TENANT POLICY FACTORY (For all tables with `tenant_id`)
+// 🛡️ REUSABLE MULTI-TENANT POLICY FACTORY
 // ==============================================================================
 export function createMultiTenantPolicies(tableName: string) {
   return [
-    // 1. Admin Policy (postgres superuser has full access for seeds & migrations)
     pgPolicy(`postgres_admin_${tableName}_all`, {
       for: 'all',
       to: 'postgres',
       using: sql`true`,
       withCheck: sql`true`,
     }),
-
-    // 2. App Runtime Policy (100% Engine-Enforced Tenant Isolation via tenant_id)
     pgPolicy(`factaurant_app_${tableName}_isolation`, {
       for: 'all',
       to: 'factaurant_app',
       using: sql`tenant_id = nullif(current_setting('app.current_tenant_id', true), '')::uuid`,
       withCheck: sql`tenant_id = nullif(current_setting('app.current_tenant_id', true), '')::uuid`,
     }),
-
-    // 3. Smoke Reader Policy (Read access for automated test runner)
     pgPolicy(`smoke_reader_can_read_${tableName}`, {
       for: 'select',
       to: 'smoke_reader',
@@ -119,18 +151,63 @@ export const tenants = pgTable(
 ).enableRLS();
 
 // ==============================================================================
-// 2. THE PRODUCT TABLE (Uses Multi-Tenant Policy Helper)
+// 2. CATEGORIES TABLE (New!)
+// ==============================================================================
+export const categories = pgTable(
+  'categories',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: text('name').notNull(), // e.g. "Wood-Fired Pizzas"
+    slug: text('slug').notNull(), // e.g. "pizzas"
+    displayOrder: integer('display_order').default(0).notNull(), // Sequence in tabs
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('tenant_category_slug_idx').on(table.tenantId, table.slug),
+    // ⚡ Inherits full multi-tenant RLS in one line!
+    ...createMultiTenantPolicies('categories'),
+  ]
+).enableRLS();
+
+export type Category = typeof categories.$inferSelect;
+export type NewCategory = typeof categories.$inferInsert;
+
+// ==============================================================================
+// 3. PRODUCTS TABLE (Updated with categoryId & dietaryType!)
 // ==============================================================================
 export const products = pgTable(
   'products',
   {
     id: uuid('id').primaryKey().defaultRandom().notNull(),
-    tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id, { onDelete: 'cascade' })
+      .notNull(),
+      
+    // 🔗 Foreign key to Category (optional so unassigned items don't break)
+    categoryId: uuid('category_id').references(() => categories.id, {
+      onDelete: 'set null',
+    }),
+
     name: text('name').notNull(),
     description: text('description'),
-    price: integer('price').notNull(),
+    price: integer('price').notNull(), // In integer paise / cents
     imageUrl: text('image_url'),
+
+    // 🟢 DIETARY TYPE (FSSAI Standard for Indian Food Businesses)
+    dietaryType: text('dietary_type', {
+      enum: ['veg', 'non_veg', 'contains_egg', 'vegan'],
+    })
+      .default('veg')
+      .notNull(),
+
+    // ⚡ 1-Click Availability (86ing items)
     isAvailable: boolean('is_available').default(true).notNull(),
+
+     modifierGroups: jsonb('modifier_groups').$type<ModifierGroup[]>().default([]).notNull(),
   },
   (table) => [
     ...createMultiTenantPolicies('products'),
