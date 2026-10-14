@@ -1,110 +1,190 @@
-import { Store } from '@tanstack/store'
-import { useStore } from '@tanstack/react-store'
-import { CartItem } from '../orders/order.schema'
+// src/modules/cart/cart.store.ts
+import { Store } from '@tanstack/store';
+import { useStore } from '@tanstack/react-store';
+import type { SelectedModifier } from '../../core/db/schema';
+import type { ValidatedCouponResult } from '../orders/coupon.schema';
 
-// 1. DOMAIN TYPES
-// We define exactly what an item in the cart looks like.
-// This is separate from the DB Product type because the cart needs 'quantity'.
-// export type CartItem = {
-//   productId: string;
-//   name: string;
-//   price: number;
-//   imageUrl?: string | null; // Added image so we can show it in the drawer
-//   quantity: number;
-// };
+export type CartItem = {
+  cartItemId: string;
+  productId: string;
+  name: string;
+  basePrice: number;
+  price: number;
+  quantity: number;
+  imageUrl?: string | null;
+  selectedModifiers?: SelectedModifier[];
+  itemInstructions?: string;
+};
 
-// The Shape of our State
 type CartState = {
-  items: CartItem[]
-  isOpen: boolean // Controls the UI Drawer
+  items: CartItem[];
+  isOpen: boolean;
+  appliedCoupon: ValidatedCouponResult | null;
+};
+
+export function generateCartItemId(
+  productId: string,
+  selectedModifiers: SelectedModifier[] = [],
+  itemInstructions: string = ''
+): string {
+  if (selectedModifiers.length === 0 && !itemInstructions) {
+    return productId;
+  }
+
+  const sortedOptionIds = selectedModifiers
+    .map((m) => m.optionId)
+    .sort()
+    .join(':');
+
+  const normalizedInstructions = itemInstructions.trim().toLowerCase();
+
+  return `${productId}__${sortedOptionIds}__${normalizedInstructions}`;
 }
 
-// 2. THE STORE INSTANCE
-// This holds the actual data in memory.
 export const cartStore = new Store<CartState>({
   items: [],
   isOpen: false,
-})
+  appliedCoupon: null,
+});
 
-// cartStore.setState()
+type SimpleProductInput = {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl?: string | null;
+};
 
-// 3. DOMAIN LOGIC (Actions)
-// We export an object 'cartService' to keep things organized.
-// Instead of dispatching vague actions, we call specific methods.
+type CustomizedProductInput = {
+  product: SimpleProductInput;
+  selectedModifiers?: SelectedModifier[];
+  itemInstructions?: string;
+  quantity?: number;
+};
+
 export const cartService = {
-  // Toggle the UI
   toggle: () => {
-    cartStore.setState((state) => ({ ...state, isOpen: !state.isOpen }))
+    cartStore.setState((state) => ({ ...state, isOpen: !state.isOpen }));
   },
 
-  // Add Item Logic
-  add: (product: {
-    id: string
-    name: string
-    price: number
-    imageUrl?: string | null
-  }) => {
-    cartStore.setState((state) => {
-      // Check if item is already in cart
-      const existing = state.items.find((item) => item.productId === product.id)
+  open: () => {
+    cartStore.setState((state) => ({ ...state, isOpen: true }));
+  },
 
-      if (existing) {
-        // Increment quantity if exists
+  close: () => {
+    cartStore.setState((state) => ({ ...state, isOpen: false }));
+  },
+
+  add: (input: SimpleProductInput | CustomizedProductInput) => {
+    const payload =
+      'product' in input
+        ? input
+        : { product: input, selectedModifiers: [], itemInstructions: '', quantity: 1 };
+
+    const { product, selectedModifiers = [], itemInstructions = '', quantity = 1 } = payload;
+    const modifiersTotal = selectedModifiers.reduce((sum, mod) => sum + mod.price, 0);
+    const unitPrice = product.price + modifiersTotal;
+
+    const cartItemId = generateCartItemId(product.id, selectedModifiers, itemInstructions);
+
+    cartStore.setState((state) => {
+      const existingIndex = state.items.findIndex((item) => item.cartItemId === cartItemId);
+
+      if (existingIndex > -1) {
+        const updatedItems = [...state.items];
+        updatedItems[existingIndex] = {
+          ...updatedItems[existingIndex],
+          quantity: updatedItems[existingIndex].quantity + quantity,
+        };
+
         return {
           ...state,
-          items: state.items.map((item) =>
-            item.productId === product.id
-              ? { ...item, quantity: item.quantity + 1 }
-              : item,
-          ),
-          isOpen: true, // Auto-open for better UX
-        }
+          items: updatedItems,
+          isOpen: true,
+        };
       }
 
-      // Add new item if not exists
+      const newItem: CartItem = {
+        cartItemId,
+        productId: product.id,
+        name: product.name,
+        basePrice: product.price,
+        price: unitPrice,
+        quantity,
+        imageUrl: product.imageUrl,
+        selectedModifiers,
+        itemInstructions: itemInstructions.trim() || undefined,
+      };
+
       return {
         ...state,
-        items: [
-          ...state.items,
-          {
-            productId: product.id,
-            name: product.name,
-            price: product.price,
-            imageUrl: product.imageUrl,
-            quantity: 1,
-          },
-        ],
+        items: [...state.items, newItem],
         isOpen: true,
-      }
-    })
+      };
+    });
   },
 
-  // Remove Item Logic
-  remove: (productId: string) => {
+  remove: (cartItemId: string) => {
     cartStore.setState((state) => ({
       ...state,
-      items: state.items.filter((item) => item.productId !== productId),
-    }))
+      items: state.items.filter((item) => item.cartItemId !== cartItemId),
+    }));
   },
 
-  // Clear logic (for after checkout)
+  updateQuantity: (cartItemId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      cartService.remove(cartItemId);
+      return;
+    }
+
+    cartStore.setState((state) => ({
+      ...state,
+      items: state.items.map((item) =>
+        item.cartItemId === cartItemId ? { ...item, quantity: newQuantity } : item
+      ),
+    }));
+  },
+
+  // Apply verified coupon payload
+  applyCoupon: (coupon: ValidatedCouponResult) => {
+    cartStore.setState((state) => ({ ...state, appliedCoupon: coupon }));
+  },
+
+  // Remove applied coupon
+  removeCoupon: () => {
+    cartStore.setState((state) => ({ ...state, appliedCoupon: null }));
+  },
+
   clear: () => {
-    cartStore.setState((state) => ({ ...state, items: [], isOpen: false }))
+    cartStore.setState((state) => ({
+      ...state,
+      items: [],
+      isOpen: false,
+      appliedCoupon: null,
+    }));
   },
-}
+};
 
-// 4. REACT HOOK
-// This connects the Store to React Components.
 export const useCart = () => {
-  const state = useStore(cartStore)
+  const state = useStore(cartStore);
 
-  // Computed values (Derived State)
-  // We calculate these on-the-fly so we don't store redundant data.
-  const total = state.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  )
-  const count = state.items.reduce((sum, item) => sum + item.quantity, 0)
+  // Raw subtotal of all items
+  const subtotal = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const count = state.items.reduce((sum, item) => sum + item.quantity, 0);
 
-  return { ...state, total, count }
-}
+  // Calculate discount (ensures discount never exceeds subtotal)
+  const discount = state.appliedCoupon ? Math.min(state.appliedCoupon.discountAmount, subtotal) : 0;
+  
+  // Tax calculated on discounted subtotal
+  const taxableAmount = Math.max(0, subtotal - discount);
+  const tax = Math.round(taxableAmount * 0.05); // 5% GST
+  const total = taxableAmount + tax;
+
+  return {
+    ...state,
+    subtotal,
+    discount,
+    tax,
+    total,
+    count,
+  };
+};

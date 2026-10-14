@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, asc } from 'drizzle-orm';
 import { db } from './client';
-import { products, orders, tenants, users, categories } from './schema';
+import { products, orders, tenants, users, categories, coupons } from './schema';
 
 // This is the "Safe DB" type
 export type TenantScope = ReturnType<typeof createTenantScope>;
@@ -246,6 +246,25 @@ export function createTenantScope(tenantId: string) {
 
         return tenant
       }
-    }
+    },
+
+     // 6. COUPONS REPOSITORY
+    coupons: {
+      findByCode: async (code: string) => {
+        return withTenantSession(async (tx) => {
+          const [coupon] = await tx
+            .select()
+            .from(coupons)
+            .where(
+              and(
+                eq(coupons.tenantId, tenantId),
+                eq(coupons.code, code.toUpperCase().trim()),
+                eq(coupons.isActive, true)
+              )
+            );
+          return coupon || null;
+        });
+      },
+    },
   };
 }

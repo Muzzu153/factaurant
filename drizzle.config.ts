@@ -38,7 +38,7 @@ export default defineConfig({
   dbCredentials: {
     url: cleanMigrationUrl,
     ssl: {
-      // ca: caCert,
+      ca: caCert,
       rejectUnauthorized: true,
     } ,
   },

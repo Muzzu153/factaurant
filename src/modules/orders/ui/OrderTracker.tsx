@@ -140,16 +140,37 @@ export function OrderTracker({ orderId }: { orderId: string }) {
         </div>
       </div>
 
-      {/* 4. Itemized Receipt */}
+         {/* 4. Itemized Receipt */}
       <div>
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Order Receipt</h4>
         <div className="divide-y divide-slate-100 text-xs">
           {(order.items as any[]).map((item, idx) => (
-            <div key={idx} className="py-2.5 flex justify-between items-center text-slate-800">
-              <span>
-                <strong className="font-semibold">{item.quantity}x</strong> {item.name}
-              </span>
-              <span className="font-medium text-slate-900">{formatPrice(item.price * item.quantity)}</span>
+            <div key={idx} className="py-3 text-slate-800">
+              <div className="flex justify-between items-start">
+                <span className="font-semibold text-slate-900">
+                  {item.quantity}x {item.name}
+                </span>
+                <span className="font-medium text-slate-900">{formatPrice(item.price * item.quantity)}</span>
+              </div>
+
+              {/* Modifiers breakdown */}
+              {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+                <div className="mt-1 pl-3 space-y-0.5 border-l-2 border-slate-200 text-[11px] text-slate-500">
+                  {item.selectedModifiers.map((mod: any, mIdx: number) => (
+                    <div key={mIdx} className="flex justify-between">
+                      <span>• {mod.optionName}</span>
+                      {mod.price > 0 && <span>+{formatPrice(mod.price)}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Cooking note */}
+              {item.itemInstructions && (
+                <p className="mt-1 text-[11px] text-slate-500 italic">
+                  Note: "{item.itemInstructions}"
+                </p>
+              )}
             </div>
           ))}
         </div>

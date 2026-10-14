@@ -126,6 +126,7 @@ export const tenants = pgTable(
     }>().notNull(),
     blocks: jsonb('blocks').$type<Record<string, Block>>().notNull(),
     pages: jsonb('pages').$type<Record<string, PageLayout>>().notNull(),
+    globalModifierGroups: jsonb('global_modifier_groups').$type<ModifierGroup[]>().default([]).notNull(),
   },
   (table) => [
     // 👑 Admin has full control
@@ -165,6 +166,7 @@ export const categories = pgTable(
     displayOrder: integer('display_order').default(0).notNull(), // Sequence in tabs
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
+    modifierGroups: jsonb('modifier_groups').$type<ModifierGroup[]>().default([]).notNull(),
   },
   (table) => [
     uniqueIndex('tenant_category_slug_idx').on(table.tenantId, table.slug),
@@ -207,12 +209,14 @@ export const products = pgTable(
     // ⚡ 1-Click Availability (86ing items)
     isAvailable: boolean('is_available').default(true).notNull(),
 
-     modifierGroups: jsonb('modifier_groups').$type<ModifierGroup[]>().default([]).notNull(),
+    modifierGroups: jsonb('modifier_groups').$type<ModifierGroup[]>().default([]).notNull(),
   },
   (table) => [
     ...createMultiTenantPolicies('products'),
   ]
 ).enableRLS();
+
+export type Product = typeof products.$inferSelect;
 
 // ==============================================================================
 // 3. THE ORDERS TABLE (Uses Multi-Tenant Policy Helper)
@@ -261,3 +265,35 @@ export const users = pgTable(
     ...createMultiTenantPolicies('users'),
   ]
 ).enableRLS();
+
+// Add to src/core/db/schema.ts:
+
+// ==============================================================================
+// 5. COUPONS TABLE (Promotions & Discounts)
+// ==============================================================================
+export const coupons = pgTable(
+  'coupons',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id, { onDelete: 'cascade' })
+      .notNull(),
+    code: text('code').notNull(), // e.g. "FLAT50" or "WELCOME20"
+    discountType: text('discount_type', { enum: ['flat', 'percentage'] }).notNull(),
+    discountValue: integer('discount_value').notNull(), // flat amount in paise (e.g. 5000 = ₹50) or percentage (e.g. 20 = 20%)
+    minOrderAmount: integer('min_order_amount').default(0).notNull(), // minimum subtotal in paise to qualify
+    maxDiscountAmount: integer('max_discount_amount'), // cap for percentage discounts in paise (e.g. 10000 = ₹100 max)
+    isActive: boolean('is_active').default(true).notNull(),
+    expiresAt: timestamp('expires_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    // Unique coupon code per restaurant
+    uniqueIndex('tenant_coupon_code_idx').on(table.tenantId, table.code),
+    // Inherit full multi-tenant RLS policies
+    ...createMultiTenantPolicies('coupons'),
+  ]
+).enableRLS();
+
+export type Coupon = typeof coupons.$inferSelect;
+export type NewCoupon = typeof coupons.$inferInsert;

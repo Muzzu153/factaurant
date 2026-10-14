@@ -4,7 +4,7 @@ import pg from 'pg';
 import fs from 'node:fs';
 import path from 'node:path';
 import * as schema from '../src/core/db/schema';
-import { tenants, products, orders, users } from '../src/core/db/schema';
+import { tenants, products, orders, users, coupons, categories } from '../src/core/db/schema';
 import bcrypt from 'bcryptjs';
 
 // process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -35,9 +35,11 @@ async function seed() {
   console.log('🌱 Seeding test database with verified SSL connection...');
   try {
     // 1. Wipe in reverse foreign-key order
+    await adminDb.delete(coupons); // Clean coupons first
     await adminDb.delete(orders);
     await adminDb.delete(products);
     await adminDb.delete(users);
+    await adminDb.delete(categories);
     await adminDb.delete(tenants);
     console.log('🧹 Cleaned existing records.');
 
@@ -263,6 +265,37 @@ async function seed() {
         modifierGroups: [], // No modifiers
       },
     ]);
+
+    // 6. Insert Coupons (after inserting pizzaTenant and sushiTenant):
+    await adminDb.insert(coupons).values([
+      {
+        tenantId: pizzaTenant.id,
+        code: 'PIZZA50',
+        discountType: 'flat',
+        discountValue: 5000, // Flat ₹50.00 in paise
+        minOrderAmount: 30000, // Minimum order ₹300.00
+        isActive: true,
+      },
+      {
+        tenantId: pizzaTenant.id,
+        code: 'FEAST20',
+        discountType: 'percentage',
+        discountValue: 20, // 20%
+        minOrderAmount: 40000, // Minimum order ₹400.00
+        maxDiscountAmount: 10000, // Max discount capped at ₹100.00
+        isActive: true,
+      },
+      {
+        tenantId: sushiTenant.id,
+        code: 'SUSHI10',
+        discountType: 'percentage',
+        discountValue: 10, // 10%
+        minOrderAmount: 50000, // Minimum order ₹500.00
+        maxDiscountAmount: 15000, // Max discount capped at ₹150.00
+        isActive: true,
+      },
+    ]);
+    console.log('Created sample coupons for Pizza King and Sushi Master.');
     console.log('🍕 Created products for Pizza King & Sushi Master.');
 
     console.log('✅ Seed completed successfully with strict SSL verification!');

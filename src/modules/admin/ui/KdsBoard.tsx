@@ -243,17 +243,36 @@ function KdsTicketCard({
           <span className="block truncate text-[11px]">{order.customerAddress}</span>
         </div>
 
-        {/* Large Kitchen Line Items */}
-        <div className="space-y-1.5 mb-4">
+          {/* Large Kitchen Line Items with Customizations */}
+        <div className="space-y-3 mb-4">
           {items.map((item: any, idx: number) => (
-            <div key={idx} className="flex items-baseline justify-between text-xs font-semibold text-slate-900">
-              <span className="text-sm font-bold text-slate-900">
-                <span className="text-primary">{item.quantity}x</span> {item.name}
-              </span>
+            <div key={idx} className="border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+              <div className="flex items-baseline justify-between text-xs font-semibold text-slate-900">
+                <span className="text-sm font-bold text-slate-900">
+                  <span className="text-primary">{item.quantity}x</span> {item.name}
+                </span>
+              </div>
+
+              {/* Display Selected Modifiers (Size, Crust, Add-ons) */}
+              {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+                <div className="mt-1 pl-4 space-y-0.5 border-l-2 border-slate-200">
+                  {item.selectedModifiers.map((mod: any, mIdx: number) => (
+                    <div key={mIdx} className="text-[11px] text-slate-700 font-medium">
+                      <span className="text-slate-400 font-normal">{mod.groupName}:</span> {mod.optionName}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Display Special Cooking Instructions */}
+              {item.itemInstructions && (
+                <div className="mt-1 text-[11px] text-amber-800 bg-amber-50 p-1.5 rounded font-medium italic">
+                  Note: {item.itemInstructions}
+                </div>
+              )}
             </div>
           ))}
         </div>
-      </div>
 
       {/* Bottom One-Tap Kitchen Button */}
       <button
@@ -263,6 +282,7 @@ function KdsTicketCard({
       >
         {actionLabel}
       </button>
+    </div>
     </div>
   );
 }
